@@ -1,144 +1,146 @@
-import React, { useEffect, useState } from "react";
-import Papa from "papaparse";
-import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "./components/ui/table";
-import { Select } from "./components/ui/select";
-import { Button } from "./components/ui/button";
+import React, { useState, useEffect } from "react"
+import Papa from "papaparse"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table"
 
 interface Dog {
-  ID: string;
-  Name: string;
-  Breed: string;
-  Color: string;
-  Sex: string;
-  Breeder: string;
-  Owner: string;
-  [key: string]: string;
+  [key: string]: string
 }
 
 const DogRegistryApp: React.FC = () => {
-  const [dogs, setDogs] = useState<Dog[]>([]);
-  const [filteredDogs, setFilteredDogs] = useState<Dog[]>([]);
-  const [search, setSearch] = useState("");
-  const [breedFilter, setBreedFilter] = useState("");
-  const [colorFilter, setColorFilter] = useState("");
-  const [sexFilter, setSexFilter] = useState("");
+  const [dogs, setDogs] = useState<Dog[]>([])
+  const [search, setSearch] = useState("")
+  const [breedFilter, setBreedFilter] = useState("all")
+  const [colorFilter, setColorFilter] = useState("all")
+  const [sexFilter, setSexFilter] = useState("all")
 
   useEffect(() => {
-    const csvPath = `${import.meta.env.BASE_URL}test_export_padded.csv`;
-
-    Papa.parse(csvPath, {
+    Papa.parse("/test_export_padded.csv", {
       header: true,
       download: true,
       complete: (result) => {
-        setDogs(result.data as Dog[]);
-        setFilteredDogs(result.data as Dog[]);
+        setDogs(result.data as Dog[])
       },
-    });
-  }, []);
+    })
+  }, [])
 
-  useEffect(() => {
-    let result = dogs;
+  const breeds = Array.from(new Set(dogs.map((d) => d.Breed).filter(Boolean)))
+  const colors = Array.from(new Set(dogs.map((d) => d.Color).filter(Boolean)))
+  const sexes = Array.from(new Set(dogs.map((d) => d.Sex).filter(Boolean)))
 
-    if (search) {
-      const query = search.toLowerCase();
-      result = result.filter(
-        (d) =>
-          d.Name?.toLowerCase().includes(query) ||
-          d.Breeder?.toLowerCase().includes(query) ||
-          d.Owner?.toLowerCase().includes(query)
-      );
-    }
+  const filteredDogs = dogs.filter((dog) => {
+    const matchesSearch =
+      search === "" ||
+      Object.values(dog)
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase())
 
-    if (breedFilter) {
-      result = result.filter((d) => d.Breed === breedFilter);
-    }
-    if (colorFilter) {
-      result = result.filter((d) => d.Color === colorFilter);
-    }
-    if (sexFilter) {
-      result = result.filter((d) => d.Sex === sexFilter);
-    }
+    const matchesBreed = breedFilter === "all" || dog.Breed === breedFilter
+    const matchesColor = colorFilter === "all" || dog.Color === colorFilter
+    const matchesSex = sexFilter === "all" || dog.Sex === sexFilter
 
-    setFilteredDogs(result);
-  }, [search, breedFilter, colorFilter, sexFilter, dogs]);
-
-  const breeds = Array.from(new Set(dogs.map((d) => d.Breed))).filter(Boolean);
-  const colors = Array.from(new Set(dogs.map((d) => d.Color))).filter(Boolean);
-  const sexes = Array.from(new Set(dogs.map((d) => d.Sex))).filter(Boolean);
+    return matchesSearch && matchesBreed && matchesColor && matchesSex
+  })
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>Dog Registry</CardTitle>
+          <CardTitle className="text-2xl">Dog Registry</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-4">
-            <input
-              type="text"
-              placeholder="Search by name, breeder, or owner"
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Input
+              placeholder="Search by name, breeder, owner..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border px-3 py-1 rounded-md w-1/3"
             />
-            <Select value={breedFilter} onChange={(e) => setBreedFilter(e.target.value)}>
-              <option value="">All Breeds</option>
-              {breeds.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
+
+            <Select onValueChange={setBreedFilter} defaultValue="all">
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by breed" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Breeds</SelectItem>
+                {breeds.map((b) => (
+                  <SelectItem key={b} value={b}>
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
-            <Select value={colorFilter} onChange={(e) => setColorFilter(e.target.value)}>
-              <option value="">All Colors</option>
-              {colors.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
+
+            <Select onValueChange={setColorFilter} defaultValue="all">
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by color" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Colors</SelectItem>
+                {colors.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
-            <Select value={sexFilter} onChange={(e) => setSexFilter(e.target.value)}>
-              <option value="">All Sexes</option>
-              {sexes.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
+
+            <Select onValueChange={setSexFilter} defaultValue="all">
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by sex" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sexes</SelectItem>
+                {sexes.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
-            <Button onClick={() => setSearch("")}>Clear</Button>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Breed</TableHead>
-                <TableHead>Color</TableHead>
-                <TableHead>Sex</TableHead>
-                <TableHead>Breeder</TableHead>
-                <TableHead>Owner</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDogs.map((dog, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>{dog.ID}</TableCell>
-                  <TableCell>{dog.Name}</TableCell>
-                  <TableCell>{dog.Breed}</TableCell>
-                  <TableCell>{dog.Color}</TableCell>
-                  <TableCell>{dog.Sex}</TableCell>
-                  <TableCell>{dog.Breeder}</TableCell>
-                  <TableCell>{dog.Owner}</TableCell>
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {Object.keys(dogs[0] || {}).map((header) => (
+                    <TableHead key={header}>{header}</TableHead>
+                  ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredDogs.map((dog, idx) => (
+                  <TableRow key={idx}>
+                    {Object.values(dog).map((val, i) => (
+                      <TableCell key={i}>{val}</TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default DogRegistryApp;
+export default DogRegistryApp
