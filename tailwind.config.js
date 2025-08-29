@@ -8,5 +8,7 @@ export default {
     extend: {},
   },
   plugins: [require("tailwindcss-animate")],
+  corePlugins: {
+    preflight: true,   // ✅ ensures Tailwind base styles apply
+  },
 }
-
