@@ -1,0 +1,1 @@
+<the full DogRegistryApp.tsx code with Table usage>
