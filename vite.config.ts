@@ -4,8 +4,7 @@ import path from "path"
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // 👇 MUST match your GitHub Pages repo name
-  base: "/ginadean123.github.io/",
+  base: "/",
   plugins: [react()],
   resolve: {
     alias: {
