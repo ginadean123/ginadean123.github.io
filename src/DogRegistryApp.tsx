@@ -30,7 +30,7 @@ const DogRegistryApp: React.FC = () => {
   const [sexFilter, setSexFilter] = useState("all")
 
   useEffect(() => {
-    Papa.parse("/test_export_padded.csv", {
+    Papa.parse("/test_export_fixed_with_headers.csv", {
       header: true,
       download: true,
       complete: (result) => {
