@@ -1,195 +1,132 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Papa from "papaparse"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import PedigreeView from "@/components/PedigreeView"
+import { Card, CardContent } from "./components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./components/ui/dialog"
+import PedigreeView from "./components/PedigreeView"
 
 interface Dog {
   Name: string
-  Sex: string
-  "Date of Birth": string
   Sire: string
   Dam: string
-  Titles: string
   Breeder: string
   Owner: string
-  "Registration Number": string
+  RegNo: string
   Breed: string
-  Color: string
+  Coat: string
+  Titles: string
+  "Date of Birth": string
   [key: string]: any
 }
 
 export default function DogRegistryApp() {
   const [dogs, setDogs] = useState<Dog[]>([])
-  const [search, setSearch] = useState("")
-  const [breedFilter, setBreedFilter] = useState<string>("")
-  const [colorFilter, setColorFilter] = useState<string>("")
-  const [sexFilter, setSexFilter] = useState<string>("")
+  const [selectedDog, setSelectedDog] = useState<Dog | null>(null)
+  const [coiCache] = useState<Map<string, number>>(new Map())
+  const [alcCache] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
-    fetch("/test_export_fixed_with_headers.csv")
+    fetch("test_export.csv")
       .then((res) => res.text())
       .then((text) => {
-        Papa.parse<Dog>(text, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (result) => setDogs(result.data),
-        })
+        const { data } = Papa.parse<Dog>(text, { header: true, delimiter: "\t" })
+        setDogs(data.filter((d) => d.Name))
       })
   }, [])
 
-  const filteredDogs = dogs.filter((dog) => {
-    const matchesSearch =
-      dog.Name?.toLowerCase().includes(search.toLowerCase()) ||
-      dog.Breeder?.toLowerCase().includes(search.toLowerCase()) ||
-      dog.Owner?.toLowerCase().includes(search.toLowerCase()) ||
-      dog.Sire?.toLowerCase().includes(search.toLowerCase()) ||
-      dog.Dam?.toLowerCase().includes(search.toLowerCase())
+  const getCOI = (dog: Dog): number => {
+    if (coiCache.has(dog.Name)) return coiCache.get(dog.Name)!
+    const val = calculateCOI(dog, dogs, 5)
+    coiCache.set(dog.Name, val)
+    return val
+  }
 
-    const matchesBreed =
-      !breedFilter || dog.Breed?.toLowerCase() === breedFilter.toLowerCase()
-    const matchesColor =
-      !colorFilter || dog.Color?.toLowerCase() === colorFilter.toLowerCase()
-    const matchesSex =
-      !sexFilter || dog.Sex?.toLowerCase() === sexFilter.toLowerCase()
-
-    return matchesSearch && matchesBreed && matchesColor && matchesSex
-  })
-
-  // Prevent empty dropdown items
-  const breeds = Array.from(
-    new Set(dogs.map((d) => d.Breed).filter((b) => b && b.trim() !== ""))
-  )
-  const colors = Array.from(
-    new Set(dogs.map((d) => d.Color).filter((c) => c && c.trim() !== ""))
-  )
-  const sexes = Array.from(
-    new Set(dogs.map((d) => d.Sex).filter((s) => s && s.trim() !== ""))
-  )
+  const getALC = (dog: Dog): number => {
+    if (alcCache.has(dog.Name)) return alcCache.get(dog.Name)!
+    const val = calculateALC(dog, dogs, 5)
+    alcCache.set(dog.Name, val)
+    return val
+  }
 
   return (
-    <div className="flex flex-col items-center p-6">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6 w-full max-w-5xl">
-        <Input
-          placeholder="Search by name, breeder, owner..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-[240px]"
-        />
+    <div className="container mx-auto py-6">
+      <Card className="shadow-lg rounded-2xl">
+        <CardContent>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="text-left border-b">
+                <th className="p-2">Name</th>
+                <th className="p-2">Breed</th>
+                <th className="p-2">DOB</th>
+                <th className="p-2">COI</th>
+                <th className="p-2">ALC</th>
+                <th className="p-2">Pedigree</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dogs.slice(0, 50).map((dog, i) => (
+                <tr key={i} className="border-b hover:bg-muted/40">
+                  <td className="p-2">{dog.Name}</td>
+                  <td className="p-2">{dog.Breed}</td>
+                  <td className="p-2">{dog["Date of Birth"]}</td>
+                  <td className="p-2">{getCOI(dog).toFixed(2)}%</td>
+                  <td className="p-2">{getALC(dog).toFixed(2)}%</td>
+                  <td className="p-2">
+                    <button
+                      className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                      onClick={() => setSelectedDog(dog)}
+                    >
+                      View Pedigree
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
 
-        <Select onValueChange={setBreedFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by breed" />
-          </SelectTrigger>
-          <SelectContent>
-            {breeds.map((breed, i) => (
-              <SelectItem key={i} value={breed}>
-                {breed}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select onValueChange={setColorFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by color" />
-          </SelectTrigger>
-          <SelectContent>
-            {colors.map((color, i) => (
-              <SelectItem key={i} value={color}>
-                {color}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select onValueChange={setSexFilter}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Filter by sex" />
-          </SelectTrigger>
-          <SelectContent>
-            {sexes.map((sex, i) => (
-              <SelectItem key={i} value={sex}>
-                {sex}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Table */}
-      <div className="w-full max-w-5xl bg-white rounded-xl shadow-md overflow-hidden">
-        <Table>
-          <TableHeader className="bg-gray-100 sticky top-0 z-10">
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Sex</TableHead>
-              <TableHead>DOB</TableHead>
-              <TableHead>Sire</TableHead>
-              <TableHead>Dam</TableHead>
-              <TableHead>Titles</TableHead>
-              <TableHead>Breeder</TableHead>
-              <TableHead>Owner</TableHead>
-              <TableHead>Reg #</TableHead>
-              <TableHead>Breed</TableHead>
-              <TableHead>Color</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredDogs.map((dog, i) => (
-              <TableRow
-                key={i}
-                className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
-              >
-                <TableCell>{dog.Name}</TableCell>
-                <TableCell>{dog.Sex}</TableCell>
-                <TableCell>{dog["Date of Birth"]}</TableCell>
-                <TableCell>{dog.Sire}</TableCell>
-                <TableCell>{dog.Dam}</TableCell>
-                <TableCell>{dog.Titles}</TableCell>
-                <TableCell>{dog.Breeder}</TableCell>
-                <TableCell>{dog.Owner}</TableCell>
-                <TableCell>{dog["Registration Number"]}</TableCell>
-                <TableCell>{dog.Breed}</TableCell>
-                <TableCell>{dog.Color}</TableCell>
-                <TableCell>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button className="text-blue-600 hover:underline">
-                        View Pedigree
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-5xl">
-                      <PedigreeView rootDog={dog} dogs={dogs} generations={5} />
-                    </DialogContent>
-                  </Dialog>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <Dialog open={!!selectedDog} onOpenChange={() => setSelectedDog(null)}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>
+              Pedigree for {selectedDog?.Name}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedDog && (
+            <PedigreeView rootDog={selectedDog} dogs={dogs} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
+}
+
+/** --- helper calculations (same as PedigreeView, but shallow cached version) --- **/
+
+function collectAncestors(dog: Dog | undefined, dogs: Dog[], depth: number, visited = new Set<string>()): Dog[] {
+  if (!dog || depth <= 0) return []
+  if (visited.has(dog.Name)) return []
+  visited.add(dog.Name)
+  const sire = dogs.find((d) => d.Name === dog.Sire)
+  const dam = dogs.find((d) => d.Name === dog.Dam)
+  return [dog, ...collectAncestors(sire, dogs, depth - 1, visited), ...collectAncestors(dam, dogs, depth - 1, visited)]
+}
+
+function calculateCOI(dog: Dog, dogs: Dog[], generations: number): number {
+  const ancestors = collectAncestors(dog, dogs, generations)
+  const seen = new Map<string, number>()
+  let duplicateCount = 0
+  ancestors.forEach((a) => {
+    seen.set(a.Name, (seen.get(a.Name) || 0) + 1)
+    if (seen.get(a.Name)! > 1) duplicateCount++
+  })
+  const total = ancestors.length || 1
+  return (duplicateCount / total) * 100
+}
+
+function calculateALC(dog: Dog, dogs: Dog[], generations: number): number {
+  const ancestors = collectAncestors(dog, dogs, generations)
+  const unique = new Set(ancestors.map((a) => a.Name))
+  const total = ancestors.length || 1
+  return (unique.size / total) * 100
 }
