@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Papa from "papaparse";
-import Table from "./components/Table"; // adjust path if your Table file is elsewhere
+import Table from "./components/ui/table";
 
 interface Dog {
   Name: string;
