@@ -25,7 +25,7 @@ export default function DogRegistryApp() {
   const [alcCache] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
-    fetch("test_export.csv")
+    fetch("test_export_fixed_with_headers.csv")
       .then((res) => res.text())
       .then((text) => {
         const { data } = Papa.parse<Dog>(text, { header: true, delimiter: "\t" })
