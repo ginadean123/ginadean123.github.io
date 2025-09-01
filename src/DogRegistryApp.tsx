@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Papa from "papaparse";
-import Table from "./components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "./components/ui/table";
 
 interface Dog {
   Name: string;
