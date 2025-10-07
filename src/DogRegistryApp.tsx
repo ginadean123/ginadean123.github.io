@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Papa from "papaparse";
 import {
   Table,
@@ -8,23 +8,30 @@ import {
   TableHead,
   TableCell,
 } from "./components/ui/table";
-import { Input } from "./components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
+import PedigreeView from "./components/PedigreeView";
 
 interface Dog {
+  Name: string;
+  Sire: string;
+  Dam: string;
+  Titles: string;
+  "Date of Birth": string;
   [key: string]: any;
 }
 
 export default function DogRegistryApp() {
   const [data, setData] = useState<Dog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filtered, setFiltered] = useState<Dog[]>([]);
   const [search, setSearch] = useState("");
-  const [filterBreed, setFilterBreed] = useState("");
-  const [filterSex, setFilterSex] = useState("");
-  const [filterColor, setFilterColor] = useState("");
+  const [selectedDog, setSelectedDog] = useState<Dog | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // --- Load CSV data ---
   useEffect(() => {
-    const tryFiles = ["test_export_fixed_with_headers.csv", "test_export.csv"];
+    const tryFiles = [
+      "test_export_fixed_with_headers.csv", // main file
+      "test_export.csv",                    // fallback
+    ];
 
     const loadData = async () => {
       for (const file of tryFiles) {
@@ -33,133 +40,118 @@ export default function DogRegistryApp() {
           if (!res.ok) continue;
           const text = await res.text();
           const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-          if (parsed.data && parsed.data.length > 0) {
-            console.log("✅ Loaded data from", file);
-            console.log("🔍 Sample row:", parsed.data[0]);
-            setData(parsed.data as Dog[]);
-            setLoading(false);
-            return;
-          }
+          const dogs = parsed.data as Dog[];
+          setData(dogs);
+          setFiltered(dogs);
+          console.log(`✅ Loaded data from ${file}`);
+          console.log("🔍 Sample row:", dogs[0]);
+          setLoading(false);
+          return;
         } catch (err) {
           console.warn(`⚠️ Failed to load ${file}`, err);
         }
       }
+      console.error("❌ No CSV file found in /public");
       setLoading(false);
     };
 
     loadData();
   }, []);
 
-  const filteredData = useMemo(() => {
-    return data.filter((dog) => {
-      const textMatch = [dog.Name, dog.Owner, dog.Breeder, dog.Sire, dog.Dam, dog.Titles]
-        .join(" ")
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const breedMatch = filterBreed ? dog.Breed === filterBreed : true;
-      const sexMatch = filterSex ? dog.Sex === filterSex : true;
-      const colorMatch = filterColor ? dog.Color === filterColor : true;
-      return textMatch && breedMatch && sexMatch && colorMatch;
-    });
-  }, [data, search, filterBreed, filterSex, filterColor]);
+  // --- Filter by search ---
+  useEffect(() => {
+    if (!search.trim()) setFiltered(data);
+    else {
+      const q = search.toLowerCase();
+      setFiltered(
+        data.filter(
+          (d) =>
+            d.Name?.toLowerCase().includes(q) ||
+            d.Owner?.toLowerCase().includes(q) ||
+            d.Breeder?.toLowerCase().includes(q) ||
+            d.Registration?.toLowerCase().includes(q)
+        )
+      );
+    }
+  }, [search, data]);
 
-  const uniqueValues = (key: string) => {
-    const values = data.map((d) => d[key]).filter(Boolean);
-    return Array.from(new Set(values));
+  // --- Handle dog selection ---
+  const handleSelectDog = (dog: Dog) => {
+    setSelectedDog(dog);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  if (loading) {
-    return <div className="p-6 text-center text-gray-500">Loading data...</div>;
-  }
-
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6 text-center">Dog Registry</h1>
 
-      <div className="flex flex-wrap justify-center gap-3 mb-6">
-        <Input
-          placeholder="Search by name, breeder, owner..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-64"
-        />
+      {loading ? (
+        <p className="text-center text-gray-500">Loading data...</p>
+      ) : (
+        <>
+          <div className="mb-6 flex justify-center">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search dogs by name, owner, or breeder..."
+              className="border border-gray-300 rounded-lg px-4 py-2 w-full max-w-md focus:ring focus:ring-blue-300"
+            />
+          </div>
 
-        <Select onValueChange={setFilterBreed}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Filter by Breed" />
-          </SelectTrigger>
-          <SelectContent>
-            {uniqueValues("Breed").map((b) => (
-              <SelectItem key={b} value={b}>
-                {b}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select onValueChange={setFilterSex}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="Filter by Sex" />
-          </SelectTrigger>
-          <SelectContent>
-            {uniqueValues("Sex").map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select onValueChange={setFilterColor}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filter by Color" />
-          </SelectTrigger>
-          <SelectContent>
-            {uniqueValues("Color").map((c) => (
-              <SelectItem key={c} value={c}>
-                {c || "(none)"}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Breed</TableHead>
-              <TableHead>Sex</TableHead>
-              <TableHead>Color</TableHead>
-              <TableHead>Breeder</TableHead>
-              <TableHead>Owner</TableHead>
-              <TableHead>Sire</TableHead>
-              <TableHead>Dam</TableHead>
-              <TableHead>Titles</TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {filteredData.map((dog, i) => (
-              <TableRow key={i} className="hover:bg-gray-50">
-                <TableCell>{dog.Name}</TableCell>
-                <TableCell>{dog.Breed}</TableCell>
-                <TableCell>{dog.Sex}</TableCell>
-                <TableCell>{dog.Color}</TableCell>
-                <TableCell>{dog.Breeder}</TableCell>
-                <TableCell>{dog.Owner}</TableCell>
-                <TableCell>{dog.Sire}</TableCell>
-                <TableCell>{dog.Dam}</TableCell>
-                <TableCell>{dog.Titles}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {filteredData.length === 0 && (
-        <p className="text-center text-gray-500 mt-4">No dogs match your search.</p>
+          {selectedDog ? (
+            <div className="mb-8 bg-white rounded-lg shadow p-4">
+              <h2 className="text-2xl font-semibold mb-4 text-center">
+                Pedigree for {selectedDog.Name}
+              </h2>
+              <PedigreeView rootDog={selectedDog} dogs={data} />
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setSelectedDog(null)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Back to Table
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto bg-white rounded-lg shadow">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Sex</TableHead>
+                    <TableHead>Breed</TableHead>
+                    <TableHead>Titles</TableHead>
+                    <TableHead>Date of Birth</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Registration #</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((dog, idx) => (
+                    <TableRow key={idx} className="hover:bg-gray-100">
+                      <TableCell>
+                        <button
+                          onClick={() => handleSelectDog(dog)}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {dog.Name || "Unnamed"}
+                        </button>
+                      </TableCell>
+                      <TableCell>{dog.Sex || ""}</TableCell>
+                      <TableCell>{dog.Breed || ""}</TableCell>
+                      <TableCell>{dog.Titles || ""}</TableCell>
+                      <TableCell>{dog["Date of Birth"] || ""}</TableCell>
+                      <TableCell>{dog.Owner || ""}</TableCell>
+                      <TableCell>{dog["Registration Number"] || ""}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
