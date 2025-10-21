@@ -162,8 +162,8 @@ async function exportNodeToPDF(node: HTMLElement, filename: string) {
 
 // ---------- Component ----------
 export default function PedigreeTable({ rootDog, dogs, generations = 5 }: PedigreeTableProps) {
-  const totalRows = Math.pow(2, Math.max(0, generations - 1)); // e.g. 5 gens -> 16 rows
-  const colWidth = 260; // px per column
+  const totalRows = Math.pow(2, Math.max(0, generations - 1));
+  const colWidth = 260;
 
   const cells = useMemo<Cell[]>(() => {
     const out: Cell[] = [];
@@ -172,13 +172,13 @@ export default function PedigreeTable({ rootDog, dogs, generations = 5 }: Pedigr
   }, [rootDog, dogs, generations, totalRows]);
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
-
   const colBg = ["bg-white", "bg-blue-50", "bg-emerald-50", "bg-amber-50", "bg-rose-50", "bg-purple-50"];
 
+  // 🔧 remove the outer border here; we'll put the border on the grid cell wrapper
   const renderBox = (dog?: Dog) => {
     if (!dog) {
       return (
-        <div className="border rounded-md p-2 text-xs italic text-gray-400 bg-white min-h-[74px]">
+        <div className="h-full w-full p-2 text-xs italic text-gray-400 bg-white">
           Unknown
         </div>
       );
@@ -188,7 +188,7 @@ export default function PedigreeTable({ rootDog, dogs, generations = 5 }: Pedigr
     const cor = approxCORofParents(dog, dogs, generations);
 
     return (
-      <div className="border rounded-md p-2 text-xs leading-tight bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="h-full w-full p-2 text-xs leading-tight bg-white">
         <p className="font-semibold text-[13px] text-blue-900">{dog.Name}</p>
         {dog.Titles && <p className="text-gray-600">{dog.Titles}</p>}
         <p className="text-[11px] mt-1 text-gray-600">
@@ -230,29 +230,28 @@ export default function PedigreeTable({ rootDog, dogs, generations = 5 }: Pedigr
         </button>
       </div>
 
-      {/* GRID: columns = generations, rows = 2^(gens-1) */}
+      {/* GRID */}
       <div
         ref={wrapRef}
         className="overflow-x-auto rounded-md border bg-white"
         style={{
-          // fixed column widths; rows auto-height but aligned by span
           display: "grid",
           gridTemplateColumns: `repeat(${generations}, ${colWidth}px)`,
           gridTemplateRows: `repeat(${totalRows}, minmax(74px, auto))`,
-          gap: "8px",
-          padding: "8px",
+          gap: "0px",          // 🔧 no gutter so borders meet
+          padding: "0px",      // 🔧 no extra padding around grid
         }}
       >
-        {/* Optional generation background shading */}
+        {/* Column shading (kept) */}
         {Array.from({ length: generations }).map((_, i) => (
           <div
             key={`bg-${i}`}
             style={{ gridColumn: `${i + 1} / ${i + 2}`, gridRow: `1 / ${totalRows + 1}` }}
-            className={`-z-10 rounded ${colBg[i] || "bg-gray-50"}`}
+            className={`${colBg[i] || "bg-gray-50"} -z-10`}
           />
         ))}
 
-        {/* Cells positioned by column and row span */}
+        {/* Each grid item has the border so it fills the whole cell */}
         {cells.map((c, idx) => (
           <div
             key={idx}
@@ -260,6 +259,7 @@ export default function PedigreeTable({ rootDog, dogs, generations = 5 }: Pedigr
               gridColumn: `${c.col} / ${c.col + 1}`,
               gridRow: `${c.rowStart} / span ${c.rowSpan}`,
             }}
+            className="h-full w-full border border-gray-300 rounded-md bg-white box-border"
           >
             {renderBox(c.dog)}
           </div>
