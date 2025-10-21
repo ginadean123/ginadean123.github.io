@@ -117,6 +117,8 @@ export default function DogRegistryApp() {
     )
   );
 
+  const year = new Date().getFullYear();
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-6 text-center">
@@ -143,7 +145,7 @@ export default function DogRegistryApp() {
                     value={search}
                     onValueChange={setSearch}
                   />
-                  <CommandList className="h-[calc(100vh-250px)] overflow-y-auto">
+                  <CommandList className="max-h-[75vh] overflow-y-auto">
                     <CommandGroup heading="Results">
                       {filteredDogs.map((dog) => (
                         <CommandItem
@@ -235,6 +237,10 @@ export default function DogRegistryApp() {
             <TrialPedigree dogs={data} />
           )}
         </TabsContent>
+        
+        <footer className="fixed bottom-0 left-0 w-full text-center text-xs text-gray-500 py-2 bg-white/80 backdrop-blur-sm border-t border-gray-200 print:hidden">
+          © {new Date().getFullYear()} Made by <span className="font-medium">Gina Dean</span>
+        </footer>
       </Tabs>
     </div>
   );
