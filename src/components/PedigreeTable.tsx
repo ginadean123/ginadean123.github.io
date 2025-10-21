@@ -220,29 +220,16 @@ export default function PedigreeTable({ rootDog, dogs, generations = 5 }: Pedigr
     const cor = approxCORofParents(dog, dogs, generations);
 
     return (
-      <div className="h-full w-full p-2 text-xs leading-tight bg-white">
-        <p className="font-semibold text-[13px] text-blue-900">{dog.Name}</p>
-        {dog.Titles && <p className="text-gray-600">{dog.Titles}</p>}
-        <p className="text-[11px] mt-1 text-gray-600">
-          {dog.Breed || "Unknown Breed"}{dog.Color ? ` • ${dog.Color}` : ""}{dog.Sex ? ` • ${dog.Sex}` : ""}
-        </p>
-        <p className="text-[11px] text-gray-500">DOB: {dog["Date of Birth"] || "—"}</p>
-        <div className="mt-2 grid grid-cols-3 gap-1 text-[11px]">
-          <div>
-            <div className="text-gray-500">COI</div>
-            <div className={`font-semibold ${coiColor(coi)}`}>{coi.toFixed(2)}%</div>
-          </div>
-          <div>
-            <div className="text-gray-500">ALC</div>
-            <div className={`font-semibold ${alcColor(alc)}`}>{(alc * 100).toFixed(1)}%</div>
-          </div>
-          <div>
-            <div className="text-gray-500">COR</div>
-            <div className={`font-semibold ${corColor(cor)}`}>{(cor * 100).toFixed(1)}%</div>
-          </div>
-        </div>
-      </div>
-    );
+  <div className="h-full w-full flex flex-col justify-center p-2 text-xs leading-tight bg-white">
+    <p className="font-semibold text-[13px] text-blue-900 text-center">{dog.Name}</p>
+    {dog.Titles && <p className="text-gray-600 text-center">{dog.Titles}</p>}
+    <p className="text-[11px] mt-1 text-gray-600 text-center">
+      {dog.Breed || "Unknown Breed"}{dog.Color ? ` • ${dog.Color}` : ""}{dog.Sex ? ` • ${dog.Sex}` : ""}
+    </p>
+    <p className="text-[11px] text-gray-500 text-center">DOB: {dog["Date of Birth"] || "—"}</p>
+    <div className="mt-2 grid grid-cols-3 gap-1 text-[11px]">…</div>
+  </div>
+);
   };
 
   return (
