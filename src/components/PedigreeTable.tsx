@@ -135,30 +135,62 @@ function placePedigree(
   placePedigree(dam,  dogs, genIndex + 1, maxGens, rowStart + half, half, out);
 }
 
-// ---------- PDF export (html2canvas + jsPDF) ----------
+// Export a DOM node to a single-page PDF using html-to-image (no OKLCH parsing)
 async function exportNodeToPDF(node: HTMLElement, filename: string) {
-  try {
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-      import("html2canvas"),
-      import("jspdf"),
-    ] as const);
-    const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff" });
-    const img = canvas.toDataURL("image/png");
-    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const [{ toCanvas }, { jsPDF }] = await Promise.all([
+    import("html-to-image"),
+    import("jspdf"),
+  ] as const);
 
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const targetW = pageW - 40;
-    const targetH = (canvas.height * targetW) / canvas.width;
-    const y = Math.max(20, (pageH - targetH) / 2);
+  // Measure full content (not just viewport)
+  const widthPx  = Math.max(node.scrollWidth,  Math.ceil(node.getBoundingClientRect().width));
+  const heightPx = Math.max(node.scrollHeight, Math.ceil(node.getBoundingClientRect().height));
 
-    pdf.addImage(img, "PNG", 20, y, targetW, targetH);
-    pdf.save(filename);
-  } catch (e) {
-    console.warn("PDF libs missing; falling back to print()", e);
-    window.print();
-  }
+  // Ask the browser to render a canvas of the node (supports OKLCH)
+  const canvas = await toCanvas(node, {
+    cacheBust: true,
+    pixelRatio: 2,                  // sharper text
+    width: widthPx,
+    height: heightPx,
+    // Force black text / white bg for everything in the subtree
+    style: {
+      color: "#000",
+      backgroundColor: "#fff",
+    },
+    // Optional: strip box-shadows & background images (keeps things crisp)
+    filter: (n) => {
+      if (!(n instanceof Element)) return true;
+      const cs = window.getComputedStyle(n);
+      if (cs.backgroundImage && cs.backgroundImage !== "none") (n as HTMLElement).style.backgroundImage = "none";
+      if (cs.boxShadow && cs.boxShadow !== "none") (n as HTMLElement).style.boxShadow = "none";
+      return true;
+    },
+  });
+
+  // Build a one-page PDF (Letter landscape; change to "a4" if you prefer)
+  const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 20;
+  const availW = pageW - margin * 2;
+  const availH = pageH - margin * 2;
+
+  // px → pt (96 CSS px = 72 pt)
+  const PT_PER_PX = 72 / 96;
+  const canvasWpt = canvas.width  * PT_PER_PX;
+  const canvasHpt = canvas.height * PT_PER_PX;
+
+  const scale = Math.min(availW / canvasWpt, availH / canvasHpt);
+  const renderW = canvasWpt * scale;
+  const renderH = canvasHpt * scale;
+
+  const x = (pageW - renderW) / 2;
+  const y = (pageH - renderH) / 2;
+
+  pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", x, y, renderW, renderH, undefined, "FAST");
+  pdf.save(filename);
 }
+
 
 // ---------- Component ----------
 export default function PedigreeTable({ rootDog, dogs, generations = 5 }: PedigreeTableProps) {
@@ -216,18 +248,19 @@ export default function PedigreeTable({ rootDog, dogs, generations = 5 }: Pedigr
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold">Pedigree (Horizontal)</h3>
+        <h3 className="text-lg font-semibold">Pedigree</h3>
         <button
-          onClick={() =>
+        onClick={() =>
             exportNodeToPDF(
-              wrapRef.current!,
-              `${(rootDog.Name || "pedigree").replace(/\W+/g, "_")}.pdf`
+            wrapRef.current!,
+            `${(rootDog.Name || "pedigree").replace(/\W+/g, "_")}.pdf`
             )
-          }
-          className="px-3 py-1.5 text-sm rounded-md border bg-white hover:bg-gray-50 shadow-sm"
+        }
+        className="px-3 py-1.5 text-sm rounded-md border bg-white hover:bg-gray-50 shadow-sm"
         >
-          Export PDF
+        Export PDF
         </button>
+
       </div>
 
       {/* GRID */}
