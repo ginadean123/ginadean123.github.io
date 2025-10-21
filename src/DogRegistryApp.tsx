@@ -14,7 +14,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import PedigreeView from "@/components/PedigreeView";
+import PedigreeTable from "@/components/PedigreeTable";
 import TrialPedigree from "@/components/TrialPedigree";
 
 // -----------------------------
@@ -214,11 +214,7 @@ export default function DogRegistryApp() {
                       </div>
 
                       {/* Pedigree Tree */}
-                      <PedigreeView
-                        rootDog={selectedDog}
-                        dogs={data}
-                        generations={5}
-                      />
+                      <PedigreeTable rootDog={selectedDog} dogs={data} generations={5} />
                     </div>
                   )}
                 </DialogContent>
