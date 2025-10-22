@@ -19,11 +19,11 @@ interface Dog {
   [key: string]: any;
 }
 
-function getAge(dog: Dog): number {
+function getAgeYears(dog: Dog): number | null {
   const dob = dog["Date of Birth"];
-  if (!dob) return 0;
+  if (!dob) return null;
   const birthDate = new Date(dob);
-  if (isNaN(birthDate.getTime())) return 0;
+  if (isNaN(birthDate.getTime())) return null;
   const diff = Date.now() - birthDate.getTime();
   return diff / (1000 * 60 * 60 * 24 * 365.25);
 }
@@ -34,29 +34,30 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
   const [sireQuery, setSireQuery] = useState("");
   const [damQuery, setDamQuery] = useState("");
 
-  // Filter sires: only "Dog" and <= 20 years old
-  const sires = useMemo(
+  // Sires: Sex "dog", valid DOB, age ≤ 18, name matches query
+    const sires = useMemo(
     () =>
-      dogs.filter(
-        (d) =>
-          d.Sex?.toLowerCase() === "dog" &&
-          getAge(d) <= 20 &&
-          d.Name?.toLowerCase().includes(sireQuery.toLowerCase())
-      ),
+        dogs.filter((d) => {
+        if (d.Sex?.toLowerCase() !== "dog") return false;
+        const age = getAgeYears(d);
+        if (age === null || age > 18) return false;
+        return d.Name?.toLowerCase().includes(sireQuery.toLowerCase());
+        }),
     [dogs, sireQuery]
-  );
+    );
 
-  // Filter dams: only "Bitch" and <= 20 years old
-  const dams = useMemo(
+    // Dams: Sex "bitch", valid DOB, age ≤ 18, name matches query
+    const dams = useMemo(
     () =>
-      dogs.filter(
-        (d) =>
-          d.Sex?.toLowerCase() === "bitch" &&
-          getAge(d) <= 20 &&
-          d.Name?.toLowerCase().includes(damQuery.toLowerCase())
-      ),
+        dogs.filter((d) => {
+        if (d.Sex?.toLowerCase() !== "bitch") return false;
+        const age = getAgeYears(d);
+        if (age === null || age > 18) return false;
+        return d.Name?.toLowerCase().includes(damQuery.toLowerCase());
+        }),
     [dogs, damQuery]
-  );
+    );
+
 
   const sire = dogs.find((d) => d.Name === sireName);
   const dam = dogs.find((d) => d.Name === damName);
@@ -89,20 +90,18 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
             />
             <CommandList className="max-h-[500px] overflow-y-auto text-sm">
               <CommandGroup>
-                {sires.map((d) => (
-                  <CommandItem
-                    key={d.Name}
-                    onSelect={() => setSireName(d.Name)}
-                    className="py-1"
-                  >
+                {sires.map((d) => {
+                const age = getAgeYears(d);
+                return (
+                    <CommandItem key={d.Name} onSelect={() => setSireName(d.Name)} className="py-1">
                     {d.Name}
-                    {d["Date of Birth"] && (
-                      <span className="ml-auto text-xs text-gray-400">
-                        ({getAge(d).toFixed(1)} yrs)
-                      </span>
+                    {age !== null && (
+                        <span className="ml-auto text-xs text-gray-400">({age.toFixed(1)} yrs)</span>
                     )}
-                  </CommandItem>
-                ))}
+                    </CommandItem>
+                );
+                })}
+
                 {sires.length === 0 && (
                   <div className="px-3 py-2 text-xs text-muted-foreground">
                     No matching sires
@@ -128,20 +127,18 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
             />
             <CommandList className="max-h-[500px] overflow-y-auto text-sm">
               <CommandGroup>
-                {dams.map((d) => (
-                  <CommandItem
-                    key={d.Name}
-                    onSelect={() => setDamName(d.Name)}
-                    className="py-1"
-                  >
+                {dams.map((d) => {
+                const age = getAgeYears(d);
+                return (
+                    <CommandItem key={d.Name} onSelect={() => setDamName(d.Name)} className="py-1">
                     {d.Name}
-                    {d["Date of Birth"] && (
-                      <span className="ml-auto text-xs text-gray-400">
-                        ({getAge(d).toFixed(1)} yrs)
-                      </span>
+                    {age !== null && (
+                        <span className="ml-auto text-xs text-gray-400">({age.toFixed(1)} yrs)</span>
                     )}
-                  </CommandItem>
-                ))}
+                    </CommandItem>
+                );
+                })}
+
                 {dams.length === 0 && (
                   <div className="px-3 py-2 text-xs text-muted-foreground">
                     No matching dams
