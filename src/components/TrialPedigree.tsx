@@ -6,7 +6,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import PedigreeView from "@/components/PedigreeView";
+// ⛔️ was PedigreeView
+import PedigreeTable from "@/components/PedigreeTable";
 import { calculateALC, calculateCOI, calculateCOR } from "@/utils/genetics";
 
 interface Dog {
@@ -36,26 +37,24 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
   // Filter sires: only "Dog" and <= 20 years old
   const sires = useMemo(
     () =>
-      dogs
-        .filter(
-          (d) =>
-            d.Sex?.toLowerCase() === "dog" &&
-            getAge(d) <= 20 &&
-            d.Name?.toLowerCase().includes(sireQuery.toLowerCase())
-        ),
+      dogs.filter(
+        (d) =>
+          d.Sex?.toLowerCase() === "dog" &&
+          getAge(d) <= 20 &&
+          d.Name?.toLowerCase().includes(sireQuery.toLowerCase())
+      ),
     [dogs, sireQuery]
   );
 
   // Filter dams: only "Bitch" and <= 20 years old
   const dams = useMemo(
     () =>
-      dogs
-        .filter(
-          (d) =>
-            d.Sex?.toLowerCase() === "bitch" &&
-            getAge(d) <= 20 &&
-            d.Name?.toLowerCase().includes(damQuery.toLowerCase())
-        ),
+      dogs.filter(
+        (d) =>
+          d.Sex?.toLowerCase() === "bitch" &&
+          getAge(d) <= 20 &&
+          d.Name?.toLowerCase().includes(damQuery.toLowerCase())
+      ),
     [dogs, damQuery]
   );
 
@@ -64,17 +63,18 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
 
   const coi =
     sire && dam
-      ? calculateCOI({ Name: "Trial Pup", Sire: sire.Name, Dam: dam.Name } as Dog, dogs)
+      ? // Your genetics util currently accepts (offspring, dogs)
+        calculateCOI({ Name: "Trial Pup", Sire: sire.Name, Dam: dam.Name } as Dog, dogs)
       : 0;
+
   const alc =
     sire && dam ? (calculateALC(sire, dogs) + calculateALC(dam, dogs)) / 2 : 0;
+
   const cor = sire && dam ? calculateCOR(sire, dam, dogs) : 0;
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-center">
-        Trial Pedigree Simulator
-      </h2>
+      <h2 className="text-xl font-semibold text-center">Trial Pedigree Simulator</h2>
 
       <div className="flex flex-wrap items-start justify-center gap-8">
         {/* SIRE SELECTOR */}
@@ -112,9 +112,7 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
             </CommandList>
           </Command>
           {sireName && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Selected: {sireName}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Selected: {sireName}</p>
           )}
         </div>
 
@@ -153,9 +151,7 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
             </CommandList>
           </Command>
           {damName && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Selected: {damName}
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">Selected: {damName}</p>
           )}
         </div>
       </div>
@@ -163,17 +159,13 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
       {sire && dam ? (
         <div className="bg-gray-50 dark:bg-neutral-900 p-4 rounded-md border text-sm">
           <div className="flex flex-wrap gap-6 mb-4">
-            <p>
-              <strong>COI:</strong> {coi.toFixed(2)}%
-            </p>
-            <p>
-              <strong>ALC:</strong> {alc.toFixed(2)}
-            </p>
-            <p>
-              <strong>COR:</strong> {cor.toFixed(2)}%
-            </p>
+            <p><strong>COI:</strong> {coi.toFixed(2)}%</p>
+            <p><strong>ALC:</strong> {alc.toFixed(2)}</p>
+            <p><strong>COR:</strong> {cor.toFixed(2)}%</p>
           </div>
-          <PedigreeView
+
+          {/* 👉 Table view instead of tree */}
+          <PedigreeTable
             rootDog={{ Name: "Trial Pup", Sire: sire.Name, Dam: dam.Name } as Dog}
             dogs={dogs}
             generations={5}
