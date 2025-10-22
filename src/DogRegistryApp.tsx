@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Papa from "papaparse";
 import {
   Tabs,
@@ -111,11 +111,15 @@ export default function DogRegistryApp() {
     loadData();
   }, []);
 
-  const filteredDogs = data.filter((dog) =>
+  const filteredDogs = useMemo(() => {
+  const q = search.trim().toLowerCase();
+  if (q.length < 2) return []; // ← gate: wait until user types 2+ chars
+  return data.filter((dog) =>
     [dog.Name, dog.Breeder, dog.Owner].some((field) =>
-      field?.toLowerCase().includes(search.toLowerCase())
+      field?.toLowerCase().includes(q)
     )
   );
+}, [data, search]);
 
   const year = new Date().getFullYear();
 
@@ -125,11 +129,34 @@ export default function DogRegistryApp() {
         American Hairless Terrier Pedigree Database
       </h1>
 
-      <Tabs defaultValue="registry" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="flex justify-center mb-6">
-          <TabsTrigger value="registry">Registry</TabsTrigger>
-          <TabsTrigger value="trial">Trial Pedigree Simulator</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="flex justify-center gap-6 mb-10">
+  <TabsTrigger
+    value="registry"
+    className={`
+      px-10 py-5 text-xl font-semibold rounded-full border transition-all duration-200
+      ${activeTab === "registry"
+        ? "bg-blue-600 text-white border-blue-600 shadow-lg scale-[1.03]"
+        : "bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-gray-200 border-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700"}
+    `}
+  >
+    🐾 Registry
+  </TabsTrigger>
+
+  <TabsTrigger
+    value="trial"
+    className={`
+      px-10 py-5 text-xl font-semibold rounded-full border transition-all duration-200
+      ${activeTab === "trial"
+        ? "bg-green-600 text-white border-green-600 shadow-lg scale-[1.03]"
+        : "bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-gray-200 border-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700"}
+    `}
+  >
+    🧬 Trial Pedigree Simulator
+  </TabsTrigger>
+</TabsList>
+
+
 
         {/* 🐶 REGISTRY TAB */}
         <TabsContent value="registry">
@@ -138,41 +165,48 @@ export default function DogRegistryApp() {
           ) : (
             <div className="flex flex-col items-center">
               <div className="w-full max-w-2xl border rounded-md shadow-sm">
-                <Command className="w-full">
+                <Command className="w-full" /* prevent double-filtering */ shouldFilter={false}>
                   <CommandInput
-                    placeholder="Type to search name, breeder, or owner..."
-                    className="h-10 text-base"
+                    placeholder="Type at least 2 letters to search name, breeder, or owner..."
+                    className="h-14 text-lg px-4"
                     value={search}
                     onValueChange={setSearch}
                   />
                   <CommandList className="max-h-[75vh] overflow-y-auto">
-                    <CommandGroup heading="Results">
-                      {filteredDogs.map((dog) => (
-                        <CommandItem
-                          key={dog.Name}
-                          className="py-2"
-                          onSelect={() => setSelectedDog(dog)}
-                        >
-                          <div>
-                            <p className="font-medium">{dog.Name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {dog.Breed || "Unknown Breed"} • {dog.Sex || "?"} •{" "}
-                              {dog["Date of Birth"] || "Unknown DOB"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Breeder: {dog.Breeder || "N/A"} | Owner: {dog.Owner || "N/A"}
-                            </p>
+                    {search.trim().length < 2 ? (
+                      <div className="px-3 py-2 text-sm text-muted-foreground">
+                        Start typing to see results.
+                      </div>
+                    ) : (
+                      <CommandGroup heading="Results">
+                        {filteredDogs.map((dog) => (
+                          <CommandItem
+                            key={dog.Name}
+                            className="py-2"
+                            onSelect={() => setSelectedDog(dog)}
+                          >
+                            <div>
+                              <p className="font-medium">{dog.Name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {dog.Breed || "Unknown Breed"} • {dog.Sex || "?"} •{" "}
+                                {dog["Date of Birth"] || "Unknown DOB"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Breeder: {dog.Breeder || "N/A"} | Owner: {dog.Owner || "N/A"}
+                              </p>
+                            </div>
+                          </CommandItem>
+                        ))}
+                        {filteredDogs.length === 0 && (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            No matching dogs found.
                           </div>
-                        </CommandItem>
-                      ))}
-                      {filteredDogs.length === 0 && (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">
-                          No matching dogs found.
-                        </div>
-                      )}
-                    </CommandGroup>
+                        )}
+                      </CommandGroup>
+                    )}
                   </CommandList>
                 </Command>
+
               </div>
 
               {/* 🧬 Pedigree Modal */}
