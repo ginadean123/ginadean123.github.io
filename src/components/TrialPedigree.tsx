@@ -83,7 +83,7 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
           <p className="text-sm font-medium mb-1">Select Sire (Dog)</p>
           <Command className="border rounded-md shadow-sm">
             <CommandInput
-              placeholder="Type to search sire..."
+              placeholder="Type to search sire (only showing <= 18 y.o. w/ valid bday)..."
               className="h-9 text-sm"
               value={sireQuery}
               onValueChange={setSireQuery}
@@ -120,7 +120,7 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
           <p className="text-sm font-medium mb-1">Select Dam (Bitch)</p>
           <Command className="border rounded-md shadow-sm">
             <CommandInput
-              placeholder="Type to search dam..."
+              placeholder="Type to search dam (only showing <= 18 y.o. w/ valid bday)..."
               className="h-9 text-sm"
               value={damQuery}
               onValueChange={setDamQuery}
