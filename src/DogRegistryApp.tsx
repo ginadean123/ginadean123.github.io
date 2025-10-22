@@ -21,18 +21,51 @@ import TrialPedigree from "@/components/TrialPedigree";
 // Interface
 // -----------------------------
 interface Dog {
-  Name: string;
-  Sire: string;
-  Dam: string;
-  Sex: string;
-  Breed: string;
-  Color: string;
-  Breeder: string;
-  Owner: string;
-  Titles: string;
-  "Date of Birth": string;
+  // ------- Core (normalized) fields your app already uses -------
+  Name: string;                 // <- from "Titled Name" (see mapping below)
+  Sire: string;                 // <- from "Sire, Titled Name"
+  Dam: string;                  // <- from "Dam, Titled Name"
+  Sex?: string;
+  "Date of Birth"?: string;     // <- normalized from "Date Of Birth"
+
+  // ------- Exact TSV headers (all optional) -------
+  "Reg. No."?: string;
+  "Reg. No. (Alt.)"?: string;
+  "Call name"?: string;
+  "Date Of Birth"?: string;
+  "Titled Name"?: string;
+  "Sire, Titled Name"?: string;
+  "Sire, Registration No."?: string;
+  "Dam, Titled Name"?: string;
+  "Dam, Registration No."?: string;
+  "Hip Score"?: string | number;
+  "Elbow Score"?: string | number;
+  Patella?: string;
+  Heart?: string;
+  "PRA:DM:PKD"?: string;
+  "PLL:CDDY:CEA"?: string;
+  "BAER:SBA"?: string;
+  "Cause Of Death"?: string;
+  "Picture Filename 1"?: string;
+  "CHIC#"?: string | number;
+  "Inbreeding Coefficient"?: string | number;
+  Color?: string;
+  Suffix?: string;
+  "Additional Titles"?: string;
+  "All Breeders"?: string;
+  "All Owners"?: string;
+  "Ancestors Analysis"?: string;
+  "(Teeth)"?: string;
+  "Hair Type"?: string;
+  "Last Eye Test Date"?: string;
+  "Last Eye Test Result"?: string;
+  Title?: string;
+  Variety?: string;
+
+  // keep flexibility for any future columns
   [key: string]: any;
 }
+
 
 // -----------------------------
 // Utility Functions
@@ -87,29 +120,47 @@ export default function DogRegistryApp() {
   const [activeTab, setActiveTab] = useState("registry");
 
   useEffect(() => {
-    const tryFiles = ["test_export_fixed_with_headers.csv", "test_export.csv"];
-    const loadData = async () => {
-      for (const file of tryFiles) {
-        try {
-          const res = await fetch(file);
-          if (!res.ok) continue;
-          const text = await res.text();
-          const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-          setData(parsed.data as Dog[]);
-          console.log(`✅ Loaded data from ${file}`);
-          console.log("🐕 Sample:", parsed.data[0]);
-          console.log("🐾 Keys:", Object.keys(parsed.data[0] || {}));
-          setLoading(false);
-          return;
-        } catch (err) {
-          console.warn(`⚠️ Failed to load ${file}`, err);
-        }
+  const tryFiles = ["more_columns.tsv"];
+  const loadData = async () => {
+    for (const file of tryFiles) {
+      try {
+        const res = await fetch(file);
+        if (!res.ok) continue;
+        const text = await res.text();
+
+        const parsed = Papa.parse<Record<string, any>>(text, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: "\t",          // tab-separated
+        dynamicTyping: true,
+        transformHeader: (h: string) => h.trim(),
+});
+
+        const rows: Dog[] = (parsed.data || []).map((r) => {
+          const dog: Dog = {
+            Name: (r["Titled Name"] ?? r["Call name"] ?? "").toString().trim(),
+            Sire: (r["Sire, Titled Name"] ?? "").toString().trim(),
+            Dam: (r["Dam, Titled Name"] ?? "").toString().trim(),
+            Sex: (r["Sex"] ?? "").toString().trim(),
+            "Date of Birth": (r["Date Of Birth"] ?? "").toString().trim(),
+            ...r,
+          };
+          return dog;
+        });
+
+        setData(rows);
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.warn(`⚠️ Failed to load ${file}`, err);
       }
-      console.error("❌ No CSV file found in /public");
-      setLoading(false);
-    };
-    loadData();
-  }, []);
+    }
+    console.error("❌ No CSV/TSV file found in /public");
+    setLoading(false);
+  };
+  loadData();
+}, []);
+
 
   const filteredDogs = useMemo(() => {
   const q = search.trim().toLowerCase();
