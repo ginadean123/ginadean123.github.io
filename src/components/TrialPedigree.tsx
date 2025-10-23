@@ -36,6 +36,11 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
   const sireReady = sireQuery.trim().length >= 2;
   const damReady = damQuery.trim().length >= 2;
 
+  // Only show list while actively searching and not locked to selected value
+  const showSireList = sireReady && (!sireName || sireQuery.trim() !== sireName.trim());
+  const showDamList = damReady && (!damName || damQuery.trim() !== damName.trim());
+
+  // Eligibility filters
   const eligibleSires = useMemo(
     () =>
       dogs.filter((d) => {
@@ -71,8 +76,8 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-center">Trial Pedigree Simulator</h2>
 
-      {/* Always side-by-side, each exactly half width */}
-      <div className="flex w-full gap-8">
+      {/* Sire & Dam Selectors (always side-by-side, fixed space below) */}
+      <div className="flex w-full gap-8 mb-6 z-10">
         {/* SIRE SELECTOR */}
         <div className="relative basis-1/2 min-w-0">
           <p className="text-sm font-medium mb-1">Select Sire (Dog)</p>
@@ -83,17 +88,15 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
               value={sireQuery}
               onValueChange={setSireQuery}
             />
-            {/* Overlayed dropdown constrained to this half only */}
-            <CommandList className="absolute inset-x-0 z-50 mt-1 max-h-96 overflow-y-auto text-sm border rounded-md bg-background shadow-lg">
-              <CommandGroup>
-                {!sireReady && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">
-                    Start typing (min 2 characters)…
-                  </div>
-                )}
-
-                {sireReady &&
-                  eligibleSires.map((d) => {
+            {showSireList && (
+              <CommandList className="absolute top-full left-0 right-0 z-50 mt-1 max-h-96 overflow-y-auto text-sm border rounded-md bg-background shadow-lg">
+                <CommandGroup>
+                  {eligibleSires.length === 0 && (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">
+                      No eligible sires
+                    </div>
+                  )}
+                  {eligibleSires.map((d) => {
                     const age = getAgeYears(d);
                     return (
                       <CommandItem
@@ -101,7 +104,7 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
                         value={d.Name}
                         onSelect={() => {
                           setSireName(d.Name);
-                          setSireQuery(d.Name);
+                          setSireQuery(d.Name); // lock to selection => collapses list
                         }}
                         className="py-1"
                       >
@@ -114,17 +117,14 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
                       </CommandItem>
                     );
                   })}
-
-                {sireReady && eligibleSires.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">
-                    No eligible sires
-                  </div>
-                )}
-              </CommandGroup>
-            </CommandList>
+                </CommandGroup>
+              </CommandList>
+            )}
           </Command>
           {sireName && (
-            <p className="text-xs text-muted-foreground mt-1">Selected: {sireName}</p>
+            <p className="text-xs text-muted-foreground mt-2 mb-2">
+              Selected: {sireName}
+            </p>
           )}
         </div>
 
@@ -138,16 +138,15 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
               value={damQuery}
               onValueChange={setDamQuery}
             />
-            <CommandList className="absolute inset-x-0 z-50 mt-1 max-h-96 overflow-y-auto text-sm border rounded-md bg-background shadow-lg">
-              <CommandGroup>
-                {!damReady && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">
-                    Start typing (min 2 characters)…
-                  </div>
-                )}
-
-                {damReady &&
-                  eligibleDams.map((d) => {
+            {showDamList && (
+              <CommandList className="absolute top-full left-0 right-0 z-50 mt-1 max-h-96 overflow-y-auto text-sm border rounded-md bg-background shadow-lg">
+                <CommandGroup>
+                  {eligibleDams.length === 0 && (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">
+                      No eligible dams
+                    </div>
+                  )}
+                  {eligibleDams.map((d) => {
                     const age = getAgeYears(d);
                     return (
                       <CommandItem
@@ -168,29 +167,27 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
                       </CommandItem>
                     );
                   })}
-
-                {damReady && eligibleDams.length === 0 && (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">
-                    No eligible dams
-                  </div>
-                )}
-              </CommandGroup>
-            </CommandList>
+                </CommandGroup>
+              </CommandList>
+            )}
           </Command>
           {damName && (
-            <p className="text-xs text-muted-foreground mt-1">Selected: {damName}</p>
+            <p className="text-xs text-muted-foreground mt-2 mb-2">
+              Selected: {damName}
+            </p>
           )}
         </div>
       </div>
 
-      {sire && dam ? (
-        <div className="bg-gray-50 dark:bg-neutral-900 p-4 rounded-md border text-sm">
+            {sire && dam ? (
+        <div className="mt-16 bg-gray-50 dark:bg-neutral-900 p-4 rounded-md border text-sm relative z-0">
           <div className="flex flex-wrap gap-6 mb-4">
             <p><strong>COI:</strong> {coi.toFixed(2)}%</p>
             <p><strong>ALC:</strong> {alc.toFixed(2)}</p>
             <p><strong>COR:</strong> {cor.toFixed(2)}%</p>
           </div>
-
+            <br></br>
+            <br></br>
           <PedigreeTable
             rootDog={{ Name: "Trial Pup", Sire: sire.Name, Dam: dam.Name } as Dog}
             dogs={dogs}
@@ -202,6 +199,7 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
           Pick a sire and a dam to view the simulated pedigree.
         </p>
       )}
+
     </div>
   );
 }
