@@ -6,7 +6,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-// ⛔️ was PedigreeView
 import PedigreeTable from "@/components/PedigreeTable";
 import { calculateALC, calculateCOI, calculateCOR } from "@/utils/genetics";
 
@@ -34,77 +33,91 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
   const [sireQuery, setSireQuery] = useState("");
   const [damQuery, setDamQuery] = useState("");
 
-  // Sires: Sex "dog", valid DOB, age ≤ 18, name matches query
-    const sires = useMemo(
+  const sireReady = sireQuery.trim().length >= 2;
+  const damReady = damQuery.trim().length >= 2;
+
+  const eligibleSires = useMemo(
     () =>
-        dogs.filter((d) => {
+      dogs.filter((d) => {
         if (d.Sex?.toLowerCase() !== "dog") return false;
         const age = getAgeYears(d);
-        if (age === null || age > 18) return false;
-        return d.Name?.toLowerCase().includes(sireQuery.toLowerCase());
-        }),
-    [dogs, sireQuery]
-    );
+        return !(age === null || age > 18);
+      }),
+    [dogs]
+  );
 
-    // Dams: Sex "bitch", valid DOB, age ≤ 18, name matches query
-    const dams = useMemo(
+  const eligibleDams = useMemo(
     () =>
-        dogs.filter((d) => {
+      dogs.filter((d) => {
         if (d.Sex?.toLowerCase() !== "bitch") return false;
         const age = getAgeYears(d);
-        if (age === null || age > 18) return false;
-        return d.Name?.toLowerCase().includes(damQuery.toLowerCase());
-        }),
-    [dogs, damQuery]
-    );
-
+        return !(age === null || age > 18);
+      }),
+    [dogs]
+  );
 
   const sire = dogs.find((d) => d.Name === sireName);
   const dam = dogs.find((d) => d.Name === damName);
 
   const coi =
     sire && dam
-      ? // Your genetics util currently accepts (offspring, dogs)
-        calculateCOI({ Name: "Trial Pup", Sire: sire.Name, Dam: dam.Name } as Dog, dogs)
+      ? calculateCOI({ Name: "Trial Pup", Sire: sire.Name, Dam: dam.Name } as Dog, dogs)
       : 0;
 
-  const alc =
-    sire && dam ? (calculateALC(sire, dogs) + calculateALC(dam, dogs)) / 2 : 0;
-
+  const alc = sire && dam ? (calculateALC(sire, dogs) + calculateALC(dam, dogs)) / 2 : 0;
   const cor = sire && dam ? calculateCOR(sire, dam, dogs) : 0;
 
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-center">Trial Pedigree Simulator</h2>
 
-      <div className="flex flex-wrap items-start justify-center gap-8">
+      {/* Always side-by-side, each exactly half width */}
+      <div className="flex w-full gap-8">
         {/* SIRE SELECTOR */}
-        <div className="w-72">
+        <div className="relative basis-1/2 min-w-0">
           <p className="text-sm font-medium mb-1">Select Sire (Dog)</p>
-          <Command className="border rounded-md shadow-sm">
+          <Command className="border rounded-md shadow-sm w-full">
             <CommandInput
-              placeholder="Type to search sire (only showing <= 18 y.o. w/ valid bday)..."
+              placeholder="Type at least 2 letters to search..."
               className="h-9 text-sm"
               value={sireQuery}
               onValueChange={setSireQuery}
             />
-            <CommandList className="max-h-[500px] overflow-y-auto text-sm">
+            {/* Overlayed dropdown constrained to this half only */}
+            <CommandList className="absolute inset-x-0 z-50 mt-1 max-h-96 overflow-y-auto text-sm border rounded-md bg-background shadow-lg">
               <CommandGroup>
-                {sires.map((d) => {
-                const age = getAgeYears(d);
-                return (
-                    <CommandItem key={d.Name} onSelect={() => setSireName(d.Name)} className="py-1">
-                    {d.Name}
-                    {age !== null && (
-                        <span className="ml-auto text-xs text-gray-400">({age.toFixed(1)} yrs)</span>
-                    )}
-                    </CommandItem>
-                );
-                })}
-
-                {sires.length === 0 && (
+                {!sireReady && (
                   <div className="px-3 py-2 text-xs text-muted-foreground">
-                    No matching sires
+                    Start typing (min 2 characters)…
+                  </div>
+                )}
+
+                {sireReady &&
+                  eligibleSires.map((d) => {
+                    const age = getAgeYears(d);
+                    return (
+                      <CommandItem
+                        key={d.Name}
+                        value={d.Name}
+                        onSelect={() => {
+                          setSireName(d.Name);
+                          setSireQuery(d.Name);
+                        }}
+                        className="py-1"
+                      >
+                        {d.Name}
+                        {age !== null && (
+                          <span className="ml-auto text-xs text-gray-400">
+                            ({age.toFixed(1)} yrs)
+                          </span>
+                        )}
+                      </CommandItem>
+                    );
+                  })}
+
+                {sireReady && eligibleSires.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    No eligible sires
                   </div>
                 )}
               </CommandGroup>
@@ -116,32 +129,49 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
         </div>
 
         {/* DAM SELECTOR */}
-        <div className="w-72">
+        <div className="relative basis-1/2 min-w-0">
           <p className="text-sm font-medium mb-1">Select Dam (Bitch)</p>
-          <Command className="border rounded-md shadow-sm">
+          <Command className="border rounded-md shadow-sm w-full">
             <CommandInput
-              placeholder="Type to search dam (only showing <= 18 y.o. w/ valid bday)..."
+              placeholder="Type at least 2 letters to search..."
               className="h-9 text-sm"
               value={damQuery}
               onValueChange={setDamQuery}
             />
-            <CommandList className="max-h-[500px] overflow-y-auto text-sm">
+            <CommandList className="absolute inset-x-0 z-50 mt-1 max-h-96 overflow-y-auto text-sm border rounded-md bg-background shadow-lg">
               <CommandGroup>
-                {dams.map((d) => {
-                const age = getAgeYears(d);
-                return (
-                    <CommandItem key={d.Name} onSelect={() => setDamName(d.Name)} className="py-1">
-                    {d.Name}
-                    {age !== null && (
-                        <span className="ml-auto text-xs text-gray-400">({age.toFixed(1)} yrs)</span>
-                    )}
-                    </CommandItem>
-                );
-                })}
-
-                {dams.length === 0 && (
+                {!damReady && (
                   <div className="px-3 py-2 text-xs text-muted-foreground">
-                    No matching dams
+                    Start typing (min 2 characters)…
+                  </div>
+                )}
+
+                {damReady &&
+                  eligibleDams.map((d) => {
+                    const age = getAgeYears(d);
+                    return (
+                      <CommandItem
+                        key={d.Name}
+                        value={d.Name}
+                        onSelect={() => {
+                          setDamName(d.Name);
+                          setDamQuery(d.Name);
+                        }}
+                        className="py-1"
+                      >
+                        {d.Name}
+                        {age !== null && (
+                          <span className="ml-auto text-xs text-gray-400">
+                            ({age.toFixed(1)} yrs)
+                          </span>
+                        )}
+                      </CommandItem>
+                    );
+                  })}
+
+                {damReady && eligibleDams.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">
+                    No eligible dams
                   </div>
                 )}
               </CommandGroup>
@@ -161,7 +191,6 @@ export default function TrialPedigree({ dogs }: { dogs: Dog[] }) {
             <p><strong>COR:</strong> {cor.toFixed(2)}%</p>
           </div>
 
-          {/* 👉 Table view instead of tree */}
           <PedigreeTable
             rootDog={{ Name: "Trial Pup", Sire: sire.Name, Dam: dam.Name } as Dog}
             dogs={dogs}
